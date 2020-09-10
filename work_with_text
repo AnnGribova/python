@@ -1,0 +1,69 @@
+#Посчитать количество слов, которые встречаются в тексте чаще, чем 3 раза. Вывести эти слова и числа на экран.
+
+stroka = input()
+#уберём знаки препинания и разделим слова 
+new = stroka.lower().replace('.',' ').replace(',',' ').replace('?',' ')\
+                    .replace('"',' ').replace("'",'').replace('!', ' ').split()
+#пустой словарь
+slovar = {}
+#считаем слова
+for word in new:
+    count = slovar.get(word,0)
+    slovar[word] = count + 1
+#возвращаем список всех доступных ключей в словаре
+slovar_list = slovar.keys()
+#выводим слова и их количество, которые встречаются в тексте чаще, чем 3 раза
+for words in slovar_list:
+    if slovar[words] > 3:
+        print(words, slovar[words])
+
+#Освободить текст от всех символов, которые не буквы и не цифры. 
+
+stroka = """Asia is the world's largest continent. A place with e734h112@! unique cultural heritage, Asia is home to more than 3.8 billion people, making it the crcrc567! most populous continent on Earth. Even today people around 1237dg39! Asia hold festivals celebrating the deeds of heroes and animals from ancient folklore. 
+The collection of folktales from Asia consists of fourteen books !! with 353 stories: 55 Arabic folktales, 104 Chinese folktales, 69 Indian folktales, 69 Japanese folktales and 61 Filipino folktales."""
+#так как требуется убрать только символы, а не слова, которые их содержат, делаем следующее
+clean_str = stroka.replace('.',' ').replace(',',' ').replace('"',' ')\
+                  .replace("'",'').replace('!', ' ')\
+                  .replace(':', ' ').replace('@', ' ')
+print(clean_str.replace('  ', ' '), '\n')
+#если преполагалось также убрать непонятные слова
+super_clean_str = clean_str.replace('e734h112','').replace('crcrc567','').replace('1237dg39','')
+print(super_clean_str.replace('  ', ' '))
+
+#Нужно проверить, что строка является паролем, то есть в ней как минимум 6 символов разного регистра, есть цифры, буквы и другие символы
+password = input("Ввод пароля: ")
+import re    #импортируем re для поиска в строке
+if len(password) < 6:   #пароль должен быть минимум 6 символов
+    print('строка не является паролем')
+elif re.search('[0-9]',password) is None:    #пароль должен содержать цифры
+    print('строка не является паролем')
+elif re.search('[a-z]',password) is None:    #пароль должен содержать буквы
+    print('строка не является паролем')
+elif re.search('[A-Z]',password) is None:    #пароль должен содержать также заглавные буквы
+    print('строка не является паролем')
+elif re.search('[!?$#@]',password) is None:  #пароль должен содержать другие символы
+    print('строка не является паролем')
+else:
+    print('строка является паролем')
+
+#Для текста passwords.txt, в котором есть пароли 
+#(то есть строки, состоящие как минимум из 6 символов разного регистра и содержащие цифры, буквы и другие символы), 
+#найти и вывести на экран все пароли. Текст нужно считать из файла.
+
+with open('C:\\Users\\Desktop\\passwords.txt') as f:
+    text = f.read()
+import re
+def is_it_password():  #создадим функцию, которая будет печать слово, являющимся паролем
+    for password in text.splitlines():  #.splitlines() выделили строчки в один элемент
+        if len(password) < 6:     #пароль должен быть минимум 6 символов
+            continue
+        elif re.search('[0-9]',password) is None:    #пароль должен содержать цифры
+            continue
+        elif re.search('[a-z]',password) is None:    #пароль должен содержать буквы
+            continue
+        elif re.search('[A-Z]',password) is None:    #пароль должен содержать также заглавные буквы
+            continue
+        elif re.search('[!?$#@]',password) is None:  #пароль должен содержать другие символы
+            continue
+        print(password)   
+is_it_password()
