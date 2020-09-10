@@ -1,0 +1,103 @@
+#1. Взять страницу википедии https://ru.wikipedia.org/wiki/Всемирная_библиотека_(Норвежский_книжный_клуб) На ней найти все внутренние ссылки. 
+#Для каждой внутренней ссылки посчитать длину текста по ссылке (открыть страницу, текст получить через get_text из beautifulSoup, 
+#служебные символы не обязательно удалять, длину считаем через len). Для каждой страницы вывести название страницы (через поиск тэга title их beautifulSoup) и длину текста.
+
+import requests
+from bs4 import BeautifulSoup
+
+#Фукция: в href есть ссылки начинающтеся на /wiki/ и /w/index.php?, чтобы перейти по ним необходимо https://ru.wikipedia.org/
+# или есть ссылки, содержащие wikipedia.org, но без https:
+def add_domain(url):
+    if '#' in url:  #избавиться от слов, такие как #Список_книг
+        if "/wiki/" not in url:
+            return("левые ссылки")
+        else:
+            url = ''.join(["https://ru.wikipedia.org", url])
+            return(url)
+    elif 'wikipedia.org' not in url:
+        if 'https:' not in url:
+            if '/wiki/' or '/w/index.php?' in url:
+                url = ''.join(["https://ru.wikipedia.org", url])
+                return(url)
+    elif 'wikipedia.org' in url:
+        if 'https:' not in url:
+            url = ''.join(["https:", url])
+            return(url)
+    return("левые ссылки")
+
+#Также необдходимо посчитать длину текста по ссылке
+# и для каждой страницы вывести название страницы
+def lenght_and_title(url):
+    resp = requests.get(url)
+    html = resp.text
+    soup = BeautifulSoup(html, 'html.parser')
+    lenght = soup.get_text()
+    print('Длина текста по ссылке:', str(len(lenght)))
+    title = soup.title
+    print('Название страницы:', title.get_text())
+
+#Фунция: ссылки с главной страницы
+def internal_links():
+    url_given = "https://ru.wikipedia.org/wiki/Всемирная_библиотека_(Норвежский_книжный_клуб)"  #c ")" в конце почему-то добавляются повторяющиеся лишние ссылки
+    r = requests.get(url_given)
+    html = r.text
+    soup = BeautifulSoup(html, 'html.parser')
+    links = soup.findAll('a')
+    for link in links:
+        if link.get('href'):
+            url = link.get('href')
+            url = add_domain(url)
+            if url != "левые ссылки":
+                print('Для ссылки:', url); lenght_and_title(url); print('\n')
+                
+internal_links()
+
+#2. На вход функции подается ссылка на статью википедии и число N. 
+#Требуется на заданной странице найти ссылку на первую по счету статью википедии и перейти по ней (вывести название на печать). 
+#Далее тоже самое проделать N раз, уже для новой заданной страницы.
+#Делаем ссылки нормальными
+def add_domain2(url):
+    if "#" in url or ".png" in url or ".jpg" in url:
+        url = "левые ссылки"
+    elif ".svg" in url or ".ogg" in url:
+        url = "левые ссылки"
+    elif 'wikipedia.org' not in url: 
+        if 'https:' not in url:
+            if '/wiki/' or '/w/index.php?' in url:
+                url = ''.join(["https://ru.wikipedia.org", url])
+    elif 'wikipedia.org' in url: 
+        if 'https:' not in url:
+            url = ''.join(["https:", url])
+    else:
+        url = "левые ссылки"
+    return(url)
+
+#Функция, где на заданной странице найти ссылку на первую по счету статью википедии и выводим её название.
+def get_first_page(url_given, n):
+    r = requests.get(url_given)
+    html = r.text
+    soup = BeautifulSoup(html, 'html.parser')
+    title_of_first_page = soup.title.get_text()
+    soupchic = soup.findAll('div', {'id':'mw-content-text'})
+    so = soupchic[0].findAll('p')
+    links = so[0].findAll('a')
+    for link in links:
+        if link.get('href'):
+            url = link.get('href')
+            url = add_domain2(url)  #делаем нормальные ссылки
+            if url != "левые ссылки":
+                if "jpg" not in url:
+                    print("На этом этапе N =", n); print("Ссылка на статью", url)
+                    print("Название статьи: ", title_of_first_page, '\n')
+                    if n > 1:
+                        get_first_page(url, n - 1)
+                    return
+
+def get_pages():
+    url_given = input("Страница из Википедии: ")
+    n = int(input("Число N: "))
+    if n > 0:
+        get_first_page(url_given, n + 1)  # +1 так как столько нужно сделать n+1 переходов
+
+get_pages()
+
