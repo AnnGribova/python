@@ -1,0 +1,163 @@
+#1. Скачайте с московского открытого портала данных информацию о коворкингах в Москве, загрузите ее как dataframe: https://data.mos.ru/opendata/7710071979-kovorkingi
+import pandas as pd
+coworking = pd.read_excel("coworking.xlsx")
+coworking.head(3)
+
+#2. Посчитайте количество и долю бесплатных коворкингов
+#На сайте можно увидеть, что бесплатные коворкинги обозначаются как 'Бесплатно' и '-0.00'
+#следовательно, нам необходимо учесть эти условия:
+coworking['FreeCoworks'] = coworking.Tariffs.str.contains('Бесплатно') + coworking.Tariffs.str.contains('-0.00')
+value_free_coworks = coworking.FreeCoworks.value_counts()
+print("Kоличество бесплатных коворкингов:", value_free_coworks[1], '\n')
+
+proportion_free_coworks = coworking.FreeCoworks.value_counts(normalize = True)
+print("Доля бесплатных коворкингов:", proportion_free_coworks[1].round(3))
+
+#Важно отметить, что долю бесплатных коворкингов считают из 85 коворкингов (а не 164), так как по ним есть информация об оплате
+
+#3. В каком коворкинге можно отдать максимальную сумму денег единовременно?
+#Так как единовременно = за один приём, следовательно, имеется в виду за час или день,
+# то есть необходимо найти минимальное значение в строчке.
+# Можно заметить, что оно стоит в самом начале, за исключением, когда пишут "(1 день)" (как в первой строчке таблицы)
+# поэтому накладываем условие "-" (так как далее идёт нужная сумма)
+payment = coworking.Tariffs.str.extract('-(?P<OnePayment>\d+)')
+new_coworking = coworking.join(payment) # Объединяем таблицу со столбцом
+needed_tabl = new_coworking.dropna(subset = ['OnePayment'])   #убираем 'NaN'
+max_payment = needed_tabl['OnePayment'].astype(int).max()
+print('В коворкинге:', needed_tabl[needed_tabl['OnePayment'].astype(int) == max_payment].FullName, "можно отдать максимальную сумму денег единовременно")
+
+#4. Рассморим коворкинги с точки зрения SEO оптимизации (это игрушечный кейс, не думаете :) ). Для этого создайте следующие столбцы в dataframe:
+# - столбец с названием сайта коворкинга (title html страницы)
+import requests
+from bs4 import BeautifulSoup
+
+#Напишем функцию, которая приводит наши ссылки в порядок
+def right_url(url):
+    url = str(url)
+    if 'https:' not in url:
+        if 'nan' in url:
+            return("нет данных")
+        elif 'www.' in url:
+            url_new = url.replace('www.', 'http://')
+            return(url_new)
+        elif 'www.' not in url:
+            url_new = ''.join(["http://", url])
+            return(url_new)
+    return(url)
+
+#Напишем функцию, с помощью которой найдём названия коворкингов
+def get_titles(url):
+    try:
+        if url != "нет данных":
+            r = requests.get(url)
+            html = r.text
+            soup = BeautifulSoup(html, 'html.parser')
+            title = soup.title
+            all_titles = title.get_text()
+            return(all_titles)
+        else:
+            return("нет данных")
+    except:
+        return("Сайт не ответил")
+        
+spisok = []
+for url in coworking['Site']:
+    url = right_url(url)
+    tit_url = get_titles(url)
+    spisok.append(tit_url)
+
+data = pd.DataFrame({'TitleHtml': spisok})
+coworking.join(data).head(30)
+
+# - посчитайте, сколько раз название коворкига (первый столбец датафрейма) встречалось в его html странице
+import re
+import numpy as np
+
+#Функция, с помощью которой посчитаем, сколько раз название коворкига встречалось в его html странице:
+def count_name_in_url(url, name):
+    try:
+        url = right_url(url)
+        r = requests.get(url)
+        html = r.text
+        names = re.findall(name, html)
+        return(len(names))
+    except:  #Если сайт не отвечает
+        return(np.nan)
+        
+i = 0
+spisok_count_name = []
+while i != 164:
+    name = coworking["FullName"][i]    #Необходимо, чтобы индекс названия коворгинга и сайта совпадал
+    url = coworking['Site'][i]
+    names_in_url = count_name_in_url(url, name)
+    spisok_count_name.append(names_in_url)
+    i += 1
+
+data_с = pd.DataFrame({'Number Of Names': spisok_count_name})
+whole_tabl1 = coworking.join(data_с)
+whole_tabl1.head(10)
+
+# - посчитайте количество внешних ссылок на странице
+import requests
+from bs4 import BeautifulSoup
+import re
+import numpy as np
+
+#Функция: убираем всё, что после .ru/.com и тд
+#Логика: у нас есть сайт www.coworkstation.ru/, мы очищаем его от различных знаков и получаем основу: coworkstation.ru
+#если в ссылке будет основа: coworkstation.ru, то, скорее всего, это внутренняя ссылка, и она нам не подходит.
+def clean_url(url):
+    if 'www.' and '/' in url:
+        url = url.replace('www.', '')
+        return(re.sub(r'(/)[0-9a-zA-Z/а-яА-ЯёЁ]+\b', r'', url))
+    if '/' in url:
+        return(re.sub(r'(/)[0-9a-zA-Z/а-яА-ЯёЁ]+\b', r'', url))
+    return(url)
+
+#Определяем внутренние и внешние ссылки
+def norm_links(url_in):
+    url_clean = clean_url(url)
+    if 'https:' in url_in:
+        if url_clean in url_in:
+            return("внутренние ссылки")
+        else:
+            return(url_in)
+    return("внутренние ссылки")
+
+#Фунция: внешние ссылки с главной страницы
+def get_exter_links(urls):
+    try:
+        r = requests.get(urls)
+        html = r.text
+        soup = BeautifulSoup(html, 'html.parser')
+        links = soup.findAll('a')
+        spisok_url_in = []
+        for link in links:
+            if link.get('href'):
+                url_in = link.get('href')
+                url_in = norm_links(url_in)
+                if url_in != 'внутренние ссылки':
+                    spisok_url_in.append(url_in)
+        return(len(spisok_url_in))
+    except:  #Если сайт не отвечает
+        return(np.nan)
+
+spisok_numb_exter_url = []    
+for url in coworking['Site']:
+    urls = right_url(url)
+    numbers = get_exter_links(urls)
+    spisok_numb_exter_url.append(numbers)
+    
+data_n = pd.DataFrame({'Number Of EL': spisok_numb_exter_url})   #Number of External Links
+coworking.join(data_n).head(10)
+
+#У какого коворкинга количество внешних ссылок на странице максимально? У кого минимально?
+#У какого коворкинга количество внешних ссылок на странице максимально?
+whole_tabl = coworking.join(data_n)
+print('У коворкинга:', '\n', whole_tabl[whole_tabl['Number Of EL'] == whole_tabl['Number Of EL'].max()].FullName, '\n', 'количество внешних ссылок на странице максимально', '\n') 
+
+#У кого минимально?
+print('У коворкингов:', '\n', whole_tabl[whole_tabl['Number Of EL'] == whole_tabl['Number Of EL'].min()].FullName, '\n', 'количество внешних ссылок на странице минимально')
+
+#У кого больше всего названий?
+print('У коворкинга:', '\n', whole_tabl1[whole_tabl1['Number Of Names'] == whole_tabl1['Number Of Names'].max()].FullName, '\n', 'больше всего названий', '\n') 
