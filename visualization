@@ -1,0 +1,258 @@
+Свободный полет
+У вас есть файл электронной системы учета несмертельных травм, происходяших в США. (Так как весь файл очень большой, для подсчета вы можете использовать сэмпл за произвольный месяц или сэмпл с первой 1000 образцов (neiss2017_1000sample.xlsx)). Ваша задача исследовать эти данные всеми доступными вами способами и визуализировать ваше исследование за счет графиков (не менее 3 картинок). Результат должен выглядеть как отчет в jupyter-notebook, сделайте его читаемым, пользуясь текстовыми блоками. Домашнее задание будет оцениваться баллами от 1 до 6 баллов, в зависимости от продуманности отчета.
+
+Описание некоторых колонок
+
+CPSC_Case_Number - иднетификационный номер
+Treatment_Date - дата лечения
+Age - возраст
+Sex - пол (1 - мужчины, 2 - женщины)
+Race - раса пациента, закодирована числом
+Other_Race - раса пациента в другой классификации
+Body_Part - часть тела, которая требует лечения. Закодирована числом
+Diagnosis - Диагноз. Закодирован числом
+Other_Diagnosis - Диагноз в другой классификации. Закодирован числом
+Disposition - число людей, задействованых в происшествии
+Location - местоположение инцидента (закодировано число)
+Fire_Involvement - связь травмы с пожаром
+Product_1 - предмет, взаимодействие с которым вызвало травму (закодировано числом)
+Product_2 - предмет, взаимодействие с которым вызвало травму (закодировано числом)
+Narrative_1 - описание инцидента
+Narrative_2 - описание инцидента 2
+Stratum - ...
+PSU - ...
+Weight - вес
+Соответсвие между числами и тем, что они кодируют, любопытные могут найти на сайте. Но делать этого не обязательно, здесь достаточно ясных и интерпретируемых колонок.
+
+#Электронная система учета несмертельных травм, происходяших в США, за 2017 год
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+non_fatal_injuries1 = pd.read_excel("neiss2017_1000sample.xlsx")
+non_fatal_injuries = non_fatal_injuries1[non_fatal_injuries1['Age'] < 200]   #Так как в столбце Age были значения 200+, была сделана корректировка, чтобы не было искажения интерпритации
+non_fatal_injuries.head(5)
+
+#Отчёт о несмертельных травмах, происходяших в США, за 2017 год.
+#В данном отчёте представлен анализ несмертельных травм в США за 2017 год. Будет исследована выборка из 946 образцов, так как на графике, который представлен ниже, хоть и не показаны выбросы, но верхняя граница для женщин (2) выше 100, следовательно, стоит рассмотреть данные подробнее и сделать корректировку (корректировка столбца "Age" < 200);В итоге исследуем травмы, полученные за 1 по 4 января за 2017 год (Treatment_Date:дата, когда пациент обратился в учреждение для лечения).
+male = non_fatal_injuries[non_fatal_injuries['Sex'] == 1]
+value1 = []
+for age in male['Age']:
+    value1.append(age)
+
+female = non_fatal_injuries[non_fatal_injuries['Sex'] == 2]
+value2=[]
+for age in female['Age']:
+    value2.append(age)
+
+box_plot_data=[value1,value2]
+plt.boxplot(box_plot_data)
+plt.xlabel('Sex')
+plt.ylabel('Age')
+plt.title('Анализ выбросов "Age" для мужчин и женщин')
+plt.show()
+
+#Посчитаем, сколько пациентов женщин было, а сколько мужчин:
+print('Количество пациентов мужчин (1) и женщин (2):', '\n', (non_fatal_injuries['Sex']).value_counts(), '\n')
+#мин/макс возраст:
+print('Средний возраст пациентки:', female['Age'].mean(), 'года')
+print('Минимальный возраст пациентки:', female['Age'].min(), 'года')
+print('Максимальный возраст пациентки:', female['Age'].max(), 'года', '\n')
+
+#Посчитаем долю пациентов женщин и мужчин:
+print('Доля пациентов мужчин (1) и женщин (2):', '\n', (non_fatal_injuries['Sex']).value_counts(normalize=True).round(4), '\n')
+#мин/макс возраст:
+print('Средний возраст пациента мужчины:', male['Age'].mean(), 'года')
+print('Минимальный возраст пациента мужчины:', male['Age'].min(), 'года')
+print('Максимальный возраст пациента мужчины:', male['Age'].max(), 'лет')
+#За данный период было зарегистрированно 521 мужчин, что составляет 52,15% от общего числа зарегистрированных. Следовательно, женщин поступило 478 (47,85%).
+#В среднем в учереждения обращаются женщины в возрасте 45 лет, а мужчины в 32,6 года. Максимальный возраст пациента составляет 104 и 97 лет для женщины и мужчины соответственно. Минимальный возраст - 2 года для обоих полов.
+
+patients = (non_fatal_injuries['Treatment_Date']).value_counts()
+print('Количество поступивших по датам:', '\n', patients)
+
+plt.plot([1,2,3,4], [patients[0],patients[1],patients[2],patients[3]])
+plt.xlabel('День января')
+plt.ylabel('Количество пациентов')
+plt.title('Количество поступивших пациентов по дням')
+plt.show()
+По графику "Количество поступивших пациентов по дням" видим, что за 4 дня больше всего человек (319 из 946) обратилось в соответствующие учреждения 1 января 2017 года. Далее количество поступивших ежедневно уменьшалось.
+
+# Посчитаем и проилистрируем, какие расы пациентов обратились в учреждение
+print('Расы пациентов:', '\n', (non_fatal_injuries['Race']).value_counts(normalize=True).round(4), '\n')
+
+fig, ax = plt.subplots(figsize=(6, 3), subplot_kw=dict(aspect="equal"))
+
+recipe = ['Not Stated', 'White', 'Black/African American', 'Other', 'Asian', 'American Indian/Alaska Native']
+
+data = [50.11, 34.14, 11.63, 2.75, 1.27, 0.11]
+
+wedges, texts = ax.pie(data, wedgeprops=dict(width=0.5), startangle=-60)
+
+bbox_props = dict(boxstyle="square,pad=0.3", fc="w", ec="k", lw=0.72)
+kw = dict(arrowprops=dict(arrowstyle="-"),
+          bbox=bbox_props, zorder=0, va="center")
+
+for i, p in enumerate(wedges):
+    ang = (p.theta2 - p.theta1)/2. + p.theta1
+    y = np.sin(np.deg2rad(ang))
+    x = np.cos(np.deg2rad(ang))
+    horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
+    connectionstyle = "angle,angleA=0,angleB={}".format(ang)
+    kw["arrowprops"].update({"connectionstyle": connectionstyle})
+    ax.annotate(recipe[i], xy=(x, y), xytext=(1.35*np.sign(x), 1.4*y),
+                horizontalalignment=horizontalalignment, **kw)
+
+ax.set_title("Расы пациентов")
+
+plt.show()
+#По графику "Расы пациентов" можно сказать, что больше всего из зарегистрированны относятся к Not Stated(0) (т.е. нет информации). Далее по обращениям больше всего White(1) (человек, имеющий происхождение от любого из коренных народов Европы, Ближнего Востока или Северной Африки).
+
+sns.factorplot(x = 'Race', y = 'Age', data = non_fatal_injuries, kind='bar', col="Sex")
+#На графике, который изображён выше, можем сделать вывод о том, что в учреждения в среднем обращаются мужчины младше 40 лет. В среднем раса мужчин, которым 35 лет, либо не определена Not Stated(0) (т.е. нет информации), либо относится к White(1) (человек, имеющий происхождение от любого из коренных народов Европы, Ближнего Востока или Северной Африки). Мужчины, которые младше 25 лет, в среднем относятся к Black/African American(2), Asian(4) и Other(3) (используется, когда указано более одной расы или ничего из перечисленного не подходит).
+#Также можно заметить, что средний возраст женщин, обратившихся в учреждения, гораздо выше среднего возраста мужчин; исключение составляет девочка 2-х лет, относящаяся к American Indian/Alaska Native(5). В остальном женщины, которые относятся к Not Stated(0), White(1) и Asian(4), в среднем достигли возраста 45. Женщины из возрастного промежутка 20-30 лет в основном являются Black/African American(2) и Other(3).
+#Так как у нас статистика по учету несмертельных травм, следует узнать топ 3 части тела, которые требуют лечения.
+
+from collections import Counter
+
+def most_frequent(spisok): 
+    occurence_count = Counter(spisok) 
+    return occurence_count.most_common(3)
+
+spisok = []
+for numb in non_fatal_injuries["Body_Part"]:
+    spisok.append(numb)
+top3 = most_frequent(spisok)
+for i in range(len(top3)): 
+    tops = top3[i] 
+    print('Часть тела, требующая лечения, под индексом', tops[0], "зафиксирована у", tops[1], "человек")
+    
+pd.Series(sorted(non_fatal_injuries['Body_Part'])).plot.bar()
+
+#Таким образом, чаще всего повреждают часть тела под индексом 75 (Head), она зарегистрирована у 141 человека. Это также можно увидеть на графике, указанный выше.
+#Далее по встречаемости идут части тела под индексом 79 и 76, отвечающие за Trunk, lower (туловище и нижний корпус) и Face (including eyelid, eye area and nose) соответственно.
+
+#Проанализируем в каком Location(местоположение инцидента) происходил чаще всего инцидент, после которого требуется лечить часть тела Head.
+spisok1 = []
+location_non_fatal = non_fatal_injuries[non_fatal_injuries['Body_Part'] == 75]
+for numb in location_non_fatal["Location"]:
+    spisok1.append(numb)
+top_1 = most_frequent(spisok1)[0]
+top_1
+print('В местоположении под индексом', top_1[0], "чаще всего происходили инциденты, после которых требовалось лечить Head.", "\n"
+      "В данном Location зарегистровано случаев:", top_1[1], "из", top3[0][1], "возможных")
+
+#Изучим случаи, которые имеют связь травмы с пожаром:
+fire1 = (non_fatal_injuries['Fire_Involvement']).value_counts()
+fire = (non_fatal_injuries['Fire_Involvement']).value_counts(normalize=True)
+print(fire, '\n') 
+print(fire1)
+height = [fire[0], fire[1], fire[2], fire[3]]
+bars = ('0', '1', '2', '3')
+y_pos = np.arange(len(bars))
+ 
+plt.barh(y_pos, height)
+plt.yticks(y_pos, bars)
+plt.title('Связь травмы с пожаром')
+plt.show()
+
+#Как видно из графика выше, 99,15% - случаи, которые не связаны с пожаром. Однако стоит отметить, что в выборке встречаются 8 случаев, которые означают:
+#(1) Участие в пожаре и / или вдыхание дыма - Fire Dept. attend. Всего 4 случая;
+#(2) Участие в пожаре и / или вдыхание дыма - Fire Dept. did not attend. Всего 3 случая;
+#(3) Участие в пожаре и / или вдыхание дыма - Fire Dept. attendance is not recorded. Всего 1 случай.
+
+#Проанализируем количество человек, задействованых в происшествии (Disposition).
+sns.distplot(non_fatal_injuries['Disposition'])
+#Из гистограмме выше видно, что наибольшее количество человек, которые были задействованы в происшествии, - 1; далее чаще всего замешаны 4 человека.
+
+#Изучим предметы, взаимодействие с которыми вызвало травму: Product_1 и Product_2.
+def most_frequent(spisok): 
+    occurence_count = Counter(spisok) 
+    return occurence_count.most_common(1)
+
+spisok2 = []
+for numb in non_fatal_injuries["Product_1"]:
+    spisok2.append(numb)
+top2 = most_frequent(spisok2)[0]
+print('Предмет, взаимодействие с которым вызвало травму, под индексом', top2[0], "чаще всего был зафиксирован: у", top2[1], "человек")
+
+spisok3 = []
+for numb in non_fatal_injuries["Product_2"]:
+    spisok3.append(numb)
+top3 = most_frequent(spisok3)[0]
+top3
+#Было выяснено, что чаще всего был зарегистрирован предмет под индексом 1842 (Stairs or steps (excluding pull-down and folding stairs). Это случалось с 119 людьми. Второй предмет чаще всего отсутствует у 777 человек.
+
+
+
+
+
+
+
+#На страничке Звездных войнах скачайте фото: https://www.imdb.com/title/tt2527336/?ref_=ttmi_tt (со всех страниц). Воспользуйтесь requests и beatiful soup.
+import requests
+from bs4 import BeautifulSoup
+from itertools import groupby
+import time
+
+#Функция: достанем ссылку с главной странице на фотки 
+#+ приделываем настройку '?page=', с помощью которой будем переходить на разные страницы
+def get_link_to_photos(url_given):
+    response1 = requests.get(url_given)
+    soup1 = BeautifulSoup(response1.text, 'html.parser')              
+    links1 = soup1.findAll('a')
+    for link1 in links1:
+        if link1.get('href'):
+            url1 = link1.get('href')
+            if 'mediaindex' in url1:
+                spisok.append(''.join(["https://www.imdb.com", url1, '?page=']))
+
+#Функция: проверяет, есть ли страница. На сайте с несуществующей страницей есть текст с пометкой 'invalid page number'
+#Следовательно, ищем данную пометку на странице. Если её нет - получаем рабочую страницу с фотками
+def page_check(sp_photo):
+    url_try = ''.join([sp_photo, str(i)])
+    response = requests.get(url_try)
+    soup = BeautifulSoup(response.text, 'html.parser')              
+    links = soup.findAll('p')[0]
+    for link in links:
+        if 'invalid page number' in link:
+            return('Такой страницы нет')
+        else:
+            return(url_try)
+
+#Функция: получаем сами изображения
+def get_images(url):
+    response2 = requests.get(url)
+    soup2 = BeautifulSoup(response2.text, 'html.parser')              
+    links2 = soup2.findAll('img')
+    for link2 in links2:
+        if link2.get('src'):
+            url2 = link2.get('src')
+            if '.jpg' and '100' in url2:
+                spisok1.append(url2)            
+
+#Функция: сохраняем фото
+def save_photos(photos):
+    r = requests.get(photos)
+    if r.status_code == 200:
+        with open(str(name_for_install) + '.jpg', "wb") as file: 
+            file.write(r.content)
+
+url_given = "https://www.imdb.com/title/tt2527336/?ref_=ttmi_tt"
+spisok = []
+url_given = get_link_to_photos(url_given)   
+sp_photo = [el for el, _ in groupby(spisok)][0]   #Избавляемся от повторов и берём сразу из списка 1 элемент
+spisok1 = []
+i = 1
+while page_check(sp_photo) != 'Такой страницы нет':
+    page_i = ''.join([sp_photo, str(i)])
+    right_pages = get_images(page_i)
+    time.sleep(0.1)                                 #Пауза
+    i += 1
+    
+print(len(spisok1))                                #Проверка количества изображений. В итоге их 794
+name_for_install = 1
+for photo in spisok1:
+    photo = save_photos(photo)
+    name_for_install += 1
